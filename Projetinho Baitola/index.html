@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jornada Pokémon: Julia & Vc</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f0518;
+            --purple-main: #8a2be2;
+            --purple-neon: #d580ff;
+            --text-color: #f0f0f0;
+            --box-bg: rgba(20, 5, 35, 0.95);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Press Start 2P', cursive; user-select: none; }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a0b2e 100%);
+            color: var(--text-color);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; overflow: hidden;
+        }
+
+        /* Efeito de TV Antiga / DS */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none; z-index: 999; opacity: 0.6;
+        }
+
+        #app {
+            width: 100%; max-width: 400px; height: 100vh;
+            position: relative; overflow-y: auto; overflow-x: hidden;
+            background: radial-gradient(circle at top, #2a0845, transparent 70%), var(--bg-dark);
+            box-shadow: 0 0 20px rgba(138, 43, 226, 0.2);
+        }
+
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; align-items: center;
+            justify-content: center; padding: 25px; text-align: center;
+        }
+
+        .screen.active { display: flex; animation: fadeIn 0.5s ease forwards; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+        h1, h2 { font-size: 12px; line-height: 1.5; color: var(--purple-neon); text-shadow: 0 0 8px var(--purple-main); margin-bottom: 20px; }
+        p { font-size: 9px; line-height: 1.6; margin-bottom: 15px; text-shadow: 1px 1px 0 #000; }
+
+        button {
+            background-color: rgba(138, 43, 226, 0.1); color: var(--purple-neon);
+            border: 2px solid var(--purple-main); padding: 15px; width: 100%; max-width: 250px;
+            font-size: 10px; cursor: pointer; margin-top: 15px;
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.3); text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        button:active, button:hover { background: var(--purple-main); color: #fff; transform: scale(1.05); }
+
+        /* Slots */
+        .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; width: 100%; }
+        .slot {
+            width: 100%; aspect-ratio: 1; background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed var(--purple-main); border-radius: 8px;
+            display: flex; justify-content: center; align-items: center;
+            color: var(--purple-neon); font-size: 20px; cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .slot:hover { border-color: var(--purple-neon); background: rgba(138, 43, 226, 0.2); transform: scale(1.05); }
+        .slot img { width: 80%; image-rendering: pixelated; animation: floatPoke 3s ease-in-out infinite; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3)); }
+        .slot.filled { border-style: solid; background: rgba(138, 43, 226, 0.15); }
+
+        @keyframes floatPoke {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* Modal Busca (Funcional original) */
+        #search-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 100; justify-content: center; align-items: center;
+        }
+        .modal-content { background: var(--box-bg); border: 2px solid var(--purple-neon); padding: 25px; width: 85%; max-width: 350px; border-radius: 10px; text-align: center; }
+        .modal-content input { width: 100%; padding: 15px; background: #000; border: 1px solid var(--purple-main); color: #fff; margin: 15px 0; font-size: 10px; text-align: center; }
+
+        /* Barra de Compatibilidade */
+        .progress-container { width: 100%; height: 30px; background: #222; border: 2px solid var(--purple-main); margin: 20px 0; border-radius: 5px; overflow: hidden; }
+        #progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #00ffcc, #00ff88); box-shadow: 0 0 10px #00ffcc; transition: width 0.1s; }
+
+        /* Estilo Carta */
+        .letter-box {
+            background: #fff; color: #333; padding: 20px; border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace; font-size: 14px; text-align: left;
+            line-height: 1.5; border-left: 5px solid var(--purple-main); font-weight: bold;
+            max-height: 300px; overflow-y: auto; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        /* Imagens Bregas (Suas Imagens) */f
+        .brega-gallery {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; overflow: hidden; z-index: -1;
+        }
+
+        .cheesy-img {
+            position: absolute; width: 80px; height: 80px; object-fit: cover;
+            border-radius: 10px; border: 3px solid #ff69b4; box-shadow: 0 0 15px #ff69b4;
+            opacity: 0; transform: scale(0); transition: all 0.5s ease;
+        }
+
+        .img-1 { top: 10%; left: 5%; transform: rotate(-15deg); }
+        .img-2 { top: 15%; right: 5%; transform: rotate(20deg); }
+        .img-3 { top: 40%; left: -5%; transform: rotate(-25deg); }
+        .img-4 { top: 45%; right: -5%; transform: rotate(15deg); }
+        .img-5 { bottom: 20%; left: 35%; transform: rotate(5deg); width: 100px; height: 100px;}
+
+        .screen.active .cheesy-img { opacity: 0.6; transform: scale(1) rotate(inherit); animation: floatImg 4s infinite alternate; }
+
+        @keyframes floatImg { 0% { transform: translateY(0) rotate(-10deg); } 100% { transform: translateY(-15px) rotate(10deg); } }
+
+        /* Final */
+        .final-buttons { position: relative; width: 100%; height: 100px; margin-top: 20px; }
+        #btn-sim { 
+            background: #00ff66; color: #000; font-size: 14px; padding: 15px 25px; border-color: #fff;
+            position: absolute; left: 50%; transform: translateX(-110%); box-shadow: 0 0 15px #00ff66; 
+            width: 100px;
+        }
+        #btn-nao { border: 2px solid #ff4444; color: #ff4444; padding: 10px; position: absolute; left: 50%; transform: translateX(10%); background: #000; width: 100px; height: 50px; font-size: 15px; box-shadow: 0 0 15px #ff4444; }
+        
+        /* Confetes */
+        .confetti { position: absolute; width: 6px; height: 6px; background-color: var(--purple-neon); animation: fall 3s linear infinite; }
+        @keyframes fall { to { transform: translateY(100vh) rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+
+    <div id="search-modal">
+        <div class="modal-content">
+            <h2>Capturar Pokémon</h2>
+            <input type="text" id="poke-input" placeholder="NOME EM INGLÊS">
+            <div style="display: flex; gap: 10px;">
+                <button onclick="fetchPokemon()">BUSCAR</button>
+                <button onclick="closeSearch()" style="color:red; border-color:red">X</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app">
+        <div class="screen active" id="screen-1">
+            <h1>TEAM BUILDER DA JULIA</h1>
+            <div class="team-grid">
+                <div class="slot filled"  style="cursor: pointer;" onclick="alert('Já sei que ele vai ta ai 😉')"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/197.png"></div>
+                <div class="slot" id="julia-slot-2" onclick="openSearch(2)">+</div>
+                <div class="slot" id="julia-slot-3" onclick="openSearch(3)">+</div>
+                <div class="slot" id="julia-slot-4" onclick="openSearch(4)">+</div>
+                <div class="slot" id="julia-slot-5" onclick="openSearch(5)">+</div>
+                <div class="slot" id="julia-slot-6" onclick="openSearch(6)">+</div>
+            </div>
+            <p>Monte o seu time ideal!</p>
+            <button onclick="nextScreen(2)">CONFIRMAR TIME</button>
+        </div>
+
+        <div class="screen" id="screen-2">
+            <h2>EXCELENTE ESCOLHA.</h2> 
+            <button onclick="nextScreen(3)">VAMOS PARA O GABRIEL AGORA</button>
+        </div>
+
+        <div class="screen" id="screen-3">
+            <h1>TIME DE GABRIEL</h1>
+            <div class="team-grid">
+                <div class="slot filled"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/849.png"></div>
+                <div class="slot filled"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10184.png"></div>
+                <div class="slot filled"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/429.png"></div>
+                <div class="slot filled"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/560.png"></div>
+                <div class="slot filled"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/151.png"></div>
+                <div class="slot filled"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/637.png"></div>
+            </div>
+            <button onclick="startCompatibility()">TESTAR COMPATIBILIDADE</button>
+        </div>
+
+        <div class="screen" id="screen-4">
+            <h2 id="comp-status">ANALISANDO TIMES...</h2>
+            <div class="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+            <h1 id="comp-percent" style="font-size: 30px; color: #00ffcc; text-shadow: 0 0 15px #00ffcc; display: none;">100%</h1>
+            <p id="comp-msg" style="display: none; margin-top: 20px;">hmmmm... UAU mais uma coisa que a gente combina que coincidencia né? kkk</p>
+            <button id="btn-carta" style="display: none; border-color: #00ffcc; color: #00ffcc;" onclick="nextScreen(5)">CONTINUAR</button>
+        </div>
+
+        <div class="screen" id="screen-5">
+            <h2>UMA MENSAGEM PARA VOCÊ</h2>
+            <div class="letter-box">
+                Eai láela! <br><br>
+                Tô escrevendo isso aqui pq fiquei sabendo que vc gosta de cartinhas, e assim como vc gosta de cartinhas eu gosto de vc rsrs, só que digital né, pq infelizmente vc vive em um cativeiro kkkkkk.
+
+ Como a gente tá conversando a um período de tempo razoavelmente curto e a gente AINDA não tem nada kkk, eu vou escrever toda a minha linha de emoções durante as novas conversas, então lê o resto já sabendo que vai ser tão brega quanto minhas cantadas péssimas pra vc kkkkkkkkkk.<br><br>
+
+   Bom, desde o dia em que eu vi vc pela primeira vez (um amigo meu mostrando tua foto) eu tinha pensado: "krl, que menina linda" e meu coração palpitou, ai eu te segui no insta, só que vc não postava nada kkkk, ent eu fiquei esperando, esperando, esperando, até que vc tinha me seguido com a tua secundária (queria saber o motivo por sinal), ai no dia que vc tinha postado stories, eu fiquei de boca aberta assim, e te mandei mensagem. Papo de doído né? Enfim, juro que lembro de grande parte das nossas conversas, e acho que a melhor coisa que eu fiz de uns meses pra cá foi ter te mandado aquela proposta de assistir mazerunner e você antrum kkkkkkkkkk, aquela nossa primeira conversa foi muito muito boa, e depois dela pareceu que eu tinha achado quase que um espelho meu, eu realmente acho a gente muito parecido na questão de gostos e tudo mais, e que a gente combina bastante. Como você mesma tinha falado, eu sou parecido com aquele cara da IA kkkkkk (viu como eu lembro das coisas? E ao decorrer dos dias em que a gente foi conversando eu fui percebendo isso, e parei pra pensar nessa semana, que vc é a pessoa que mais me diverte no dia a dia. Te falar que nesse tempo que a gente se falou, eu tive vários dias merda, mas sempre quando eu conversava contigo parecia que nada tinha acontecido.
+  De verdade, você é uma pessoa muito especial pra mim e divertida, e não tem problema de se achar, por isso não kkkkkkk pode se sentir a mais mais ai(que vergonha). Falando mais sobre você, eu gosto muito dos seus olhos, tipo, muito mesmo (acho que é a coisa que eu mais valorizo na aparência das pessoas), queria te ver pessoalmente pra ter o privilégio de ver eles de perto.
+   Acho que é isso, gosto muito de você, qualquer coisa que aconteceu no seus dia, ou até coisas que tão te perturbando tipo a maldita geometria kkkk pode me contar, não precisa ficar com vergonha de nada pra me falar, principalmente piadas absurdas. Espero que as coisas daqui pra frente só melhorem e que a nossa intimidade aumente cada vez mais.<br><br>
+
+Com muito carinho
+Ass: Gabriel Brasil (laelo)
+
+(obs: espero que tenha gostado da carta, só sou bom com poesias, algum dia eu te mostro kk)
+            </div>
+            <button onclick="nextScreen(6)">LER O FINAL</button>
+        </div>
+
+        <div class="screen" id="screen-6">
+            
+            <div class="brega-gallery">
+                <img src="romantico1.webp" class="cheesy-img img-1">
+                <img src="romantico2.webp" class="cheesy-img img-2">
+                <img src="romatico3.webp" class="cheesy-img img-3">
+                <img src="romantico4.webp" class="cheesy-img img-4">
+                <img src="romantico5.webp" class="cheesy-img img-5">
+            </div>
+
+            <p style="position: relative; z-index: 10;">Eai, Laela...</p>
+            <h2 style="font-size: 14px; position: relative; z-index: 10; color: #fff; text-shadow: 0 0 10px #ff69b4;">Aceita continuar seguindo essa jornada comigo?</h2>
+            
+            <div class="final-buttons" style="z-index: 10;">
+                <button id="btn-sim" onclick="finish()">SIM!</button>
+                <button id="btn-nao">NÃO</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // NAVEGAÇÃO
+        function nextScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(`screen-${id}`).classList.add('active');
+        }
+
+        // LÓGICA DE BUSCA DO POKÉMON (ESTRUTURA ORIGINAL E SEGURA)
+        let activeSlot = null;
+
+        function openSearch(slotNum) { 
+            activeSlot = slotNum; 
+            document.getElementById('search-modal').style.display = 'flex'; 
+            document.getElementById('poke-input').value = '';
+            document.getElementById('poke-input').focus();
+        }
+
+        function closeSearch() { 
+            document.getElementById('search-modal').style.display = 'none'; 
+        }
+
+        async function fetchPokemon() {
+            const input = document.getElementById('poke-input').value.toLowerCase().trim().replace(/\s+/g, '-');
+            if(!input) return;
+            try {
+                const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${input}`);
+                if (!res.ok) throw new Error("Erro");
+                const data = await res.json();
+                
+                // Atualiza o HTML do slot de forma segura
+                const slotId = `julia-slot-${activeSlot}`;
+                const slot = document.getElementById(slotId);
+                slot.innerHTML = `<img src="${data.sprites.front_default}">`;
+                slot.classList.add('filled');
+                slot.style.borderStyle = 'solid';
+                
+                closeSearch();
+            } catch (e) { 
+                alert("Pokémon não encontrado! Tente em inglês (ex: iron valiant, btute bonnet...)"); 
+            }
+        }
+
+        // Permite usar a tecla "Enter" na busca
+        document.getElementById('poke-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') fetchPokemon();
+        });
+
+        // TESTE DE COMPATIBILIDADE
+        function startCompatibility() {
+            nextScreen(4);
+            let bar = document.getElementById('progress-bar');
+            let percent = 0;
+            let interval = setInterval(() => {
+                percent += Math.floor(Math.random() * 5) + 1;
+                if(percent >= 100) {
+                    percent = 100;
+                    clearInterval(interval);
+                    showResult();
+                }
+                bar.style.width = percent + "%";
+            }, 50);
+        }
+
+        function showResult() {
+            document.getElementById('comp-status').innerText = "COMPATIBILIDADE TOTAL!";
+            document.getElementById('comp-status').style.color = "#00ffcc";
+            document.getElementById('comp-percent').style.display = "block";
+            document.getElementById('comp-msg').style.display = "block";
+            document.getElementById('btn-carta').style.display = "inline-block";
+        }
+
+        // BOTÃO FUJÃO
+     const btnNao = document.getElementById('btn-nao');
+
+        
+
+        function fugirBotao() {
+
+            const maxX = window.innerWidth > 400 ? 300 : window.innerWidth - 80;
+
+            const maxY = 80;
+
+            
+
+            const randomX = Math.floor(Math.random() * maxX) - (maxX / 2);
+
+            const randomY = Math.floor(Math.random() * maxY) - (maxY / 2);
+
+            
+
+            btnNao.style.transform = `translate(${randomX}px, ${randomY}px)`;
+
+        }
+
+
+
+        btnNao.addEventListener('mouseover', fugirBotao);
+
+        btnNao.addEventListener('touchstart', (e) => {
+
+            e.preventDefault();
+
+            fugirBotao();
+
+        });
+
+        // FINAL E CONFETES
+        function finish() {
+            document.body.innerHTML = `
+                <div class="scanlines"></div>
+                <div style="text-align:center; padding:50px; background:var(--bg-dark); height:100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; color:white; font-family:'Press Start 2P'">
+                    <h1 style="color:#ff4444; text-shadow: 0 0 15px #ff4444;">Esse botão vermelho... parece eu doido vendo vc kkk</h1>
+                    <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/love-ball.png" style="width:200px; margin:30px; animation: floatPoke 2s infinite ease-in-out;">
+                    <h2 style=" color:#00ffcc; text-shadow: 0 0 15px #00ffcc; font-size: 11px; line-height: 1.8;">Obrigado por chegar até o final,<br><br> agora, me chama no insta e<br><br> me fala oq achou!</h2>
+                </div>
+            `;
+            createConfetti();
+        }
+
+        function createConfetti() {
+            for (let i = 0; i < 60; i++) {
+                let confeti = document.createElement('div');
+                confeti.classList.add('confetti');
+                confeti.style.left = Math.random() * 100 + 'vw';
+                confeti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                confeti.style.backgroundColor = Math.random() > 0.5 ? '#8a2be2' : '#00ffcc';
+                document.body.appendChild(confeti);
+            }
+        }
+    </script>
+</body>
+</html>
